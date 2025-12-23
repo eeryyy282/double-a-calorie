@@ -17,5 +17,11 @@
   "bugs": {
     "url": "https://github.com/eeryyy282/double-a-calorie/issues"
   },
-  "homepage": "https://github.com/eeryyy282/double-a-calorie#readme"
+  "homepage": "https://github.com/eeryyy282/double-a-calorie#readme",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "fs": "^0.0.1-security",
+    "qrcode-terminal": "^0.12.0"
+  }
 }
