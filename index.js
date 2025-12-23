@@ -129,3 +129,5 @@ async function connectToWhatsApp() {
         }
     });
 }
+
+connectToWhatsApp();
