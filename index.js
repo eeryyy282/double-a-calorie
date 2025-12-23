@@ -2,13 +2,14 @@ const {makeWASocket, useMultiFileAuthState, DisconnectReason} = require('@whiske
 const {GoogleGenerativeAI} = require('@google/generative-ai')
 const qrcode = require('qrcode-terminal')
 const fs = require('fs')
+const path = require('path');
 
 const API_KEY = "";
 const TARGET_GROUP_NAME = "[TEST] A2Calorie: Penghitung Kalori";
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({model: "gemini-2.5-flash"});
 
-const DB_FILE = '/database.json';
+const DB_FILE = path.join(__dirname, 'database.json');
 if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify({users: {}}));
 }
