@@ -80,4 +80,51 @@ async function connectToWhatsApp() {
             console.log('✅ A2Bot berhasil terhubung dan siap bekerja!');
         }
     });
+
+    sock.ev.on('messages.upsert', async ({message}) => {
+        const msg = message[0];
+
+        if (!msg.message || msg.key.fromMe) return;
+
+        const senderId = msg.key.participant || msg.key.remoteJid;
+        const pushName = msg.pushName || "Teman";
+
+        const textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+        if (!textMessage) return;
+
+        console.log('📩 Pesan dari ${pushName}: ${textMessage}')
+
+        const db = getDB();
+
+        if (!db.users[senderId]) {
+            db.users[senderId] = {
+                name: pushName,
+                dailyCalorieTarget: 2000,
+                caloriesConsumedToday: 0,
+                lastActive: new Date().toISOString()
+            };
+            saveDB(db);
+
+            await sock.sendMessage(msg.key.remoteJid, {text: `Halo ${pushName}! 👋 A2Bot aktif. Target kalorimu set di 2000 kkal. Silakan input makanan!`})
+            return
+        }
+
+        const userProfile = db.users[senderId];
+
+        await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
+
+        const aiResponse = await msgToAIProcess(pushName, textMessage, userProfile);
+
+        if (aiResponse) {
+            if (aiResponse.calories_detected > 0) {
+                userProfile.caloriesConsumedToday += aiResponse.calories_detected;
+                userProfile.lastActive = new Date().toISOString();
+                db.users[senderId] = userProfile;
+                saveDB(db);
+            }
+
+            await sock.sendMessage(msg.key.remoteJid, {text: aiResponse.response_message});
+        }
+    });
 }
