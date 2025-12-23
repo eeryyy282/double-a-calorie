@@ -70,7 +70,7 @@ cd double-a-calorie</code></pre>
 </ol>
 
 <h2>⚠️ Disclaimer</h2>
-<p>This project uses an Unofficial WhatsApp library (Baileys). Use wisely. There is a risk of the WhatsApp number being banned if used for spamming. Using a secondary number is recommended.</p>
+<p>This project uses an Unofficial WhatsApp library (Baileys). Use wisely. There is a risk of the WhatsApp number being banned if used for spamming. Using a secondary number is recommended. Communication and UI messages still use Bahasa Indonesia. The language can be changed in the variable found in the code.</p>
 
 <br>
 <p align="center">Made with ❤️ by <strong>Airi & Azviore</strong></p>

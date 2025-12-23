@@ -52,3 +52,32 @@ async function msgToAIProcess(username, msgUser, dataUser) {
         return null;
     }
 }
+
+async function connectToWhatsApp(){
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: true,
+        defaultQueryTimeoutMs: undefined
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+            console.log("Scan QR Code di bawah ini dengan WhatsApp:");
+            qrcode.generate(qr, {small: true});
+        }
+
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Koneksi terputus, mencoba reconnect...', shouldReconnect);
+            if (shouldReconnect) connectToWhatsApp();
+        } else if (connection === 'open') {
+            console.log('✅ A2Bot berhasil terhubung dan siap bekerja!');
+        }
+    });
+}
