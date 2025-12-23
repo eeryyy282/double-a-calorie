@@ -1,16 +1,16 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys')
-const { GoogleGenerativeAI } = require('@google/generative-ai')
+const {makeWASocket, useMultiFileAuthState, DisconnectReason} = require('@whiskeysockets/baileys')
+const {GoogleGenerativeAI} = require('@google/generative-ai')
 const qrcode = require('qrcode-terminal')
 const fs = require('fs')
 
 const API_KEY = "";
 const TARGET_GROUP_NAME = "[TEST] A2Calorie: Penghitung Kalori";
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash"});
+const model = genAI.getGenerativeModel({model: "gemini-2.5-flash"});
 
 const DB_FILE = '/database.json';
 if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }));
+    fs.writeFileSync(DB_FILE, JSON.stringify({users: {}}));
 }
 
 function getDB() {
@@ -39,8 +39,8 @@ async function msgToAIProcess(username, msgUser, dataUser) {
 
     try {
         const result = await model.generateContent([
-            { text: prompt},
-            { text: `Input User: ${msgUser}`}
+            {text: prompt},
+            {text: `Input User: ${msgUser}`}
         ]);
         const response = result.response;
         let text = response.text();
@@ -53,8 +53,8 @@ async function msgToAIProcess(username, msgUser, dataUser) {
     }
 }
 
-async function connectToWhatsApp(){
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+async function connectToWhatsApp() {
+    const {state, saveCreds} = await useMultiFileAuthState('auth_info_baileys');
 
     const sock = makeWASocket({
         auth: state,
@@ -65,7 +65,7 @@ async function connectToWhatsApp(){
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        const {connection, lastDisconnect, qr} = update;
 
         if (qr) {
             console.log("Scan QR Code di bawah ini dengan WhatsApp:");
