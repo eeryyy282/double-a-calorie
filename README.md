@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./[LOGO] A2 Calorie Penghitung Kalori.png" alt="A2Bot Logo" width="200">
+<img src="LogoA2Calorie.png" alt="A2Bot Logo" width="200">
 </p>
 
 <h1 align="center">🥑 Double A Calorie (A2Bot)</h1>
