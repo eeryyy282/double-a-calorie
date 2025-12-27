@@ -58,7 +58,9 @@ async function msgToAIProcess(namaUser, msgUser, dataUser) {
 }
 
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    const authFolder = path.join(__dirname, 'auth_info_baileys');
+
+    const { state, saveCreds } = await useMultiFileAuthState(authFolder);
 
     const sock = makeWASocket({
         auth: state,
@@ -71,10 +73,31 @@ async function connectToWhatsApp() {
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-        if (qr) qrcode.generate(qr, { small: true });
+        if (qr) {
+            console.log("\nScan QR Code di bawah ini:");
+            qrcode.generate(qr, { small: true });
+        }
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) connectToWhatsApp();
+            console.log('Koneksi terputus: ', lastDisconnect.error?.message);
+
+            if (shouldReconnect) {
+                console.log('Mencoba menghubungkan ulang...');
+                connectToWhatsApp();
+            } else {
+                console.log('⚠️ Sesi rusak atau logout. Menghapus sesi lama...');
+
+                try{
+                    fs.rmSync(authFolder, { recursive: true, force: true});
+                    console.log('✅ Folder sesi berhasil dihapus.');
+                    console.log('🔄 Memulai ulang bot untuk Scan QR baru...');
+
+                    connectToWhatsApp();
+                } catch (error) {
+                    console.error('❌ Gagal menghapus folder sesi:', err);
+                    console.log('Silakan hapus folder "auth_info_baileys" secara manual.');
+                }
+            }
         } else if (connection === 'open') {
             console.log('✅ A2Bot terhubung (Mode Aman Aktif)!');
         }
@@ -110,15 +133,9 @@ async function connectToWhatsApp() {
 
         const userProfile = db.users[senderId];
 
-        const thinkingTime = Math.floor(Math.random() * 3000) + 2000;
-
         await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
 
-        await delay(thinkingTime);
-
         const aiResponse = await msgToAIProcess(pushName, textMessage, userProfile);
-
-        await sock.sendPresenceUpdate('paused', msg.key.remoteJid);
 
         if (aiResponse) {
             if (aiResponse.calories_detected > 0) {
