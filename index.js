@@ -1,6 +1,6 @@
 require('dotenv').config();
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, delay, Browsers } = require('@whiskeysockets/baileys');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const {makeWASocket, useMultiFileAuthState, DisconnectReason, delay, Browsers} = require('@whiskeysockets/baileys');
+const {GoogleGenerativeAI} = require('@google/generative-ai');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
@@ -13,12 +13,12 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({model: "gemini-2.5-flash"});
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
 if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }));
+    fs.writeFileSync(DB_FILE, JSON.stringify({users: {}}));
 }
 
 function getDB() {
@@ -44,8 +44,8 @@ async function msgToAIProcess(namaUser, msgUser, dataUser) {
 
     try {
         const result = await model.generateContent([
-            { text: prompt },
-            { text: `Input User: ${msgUser}` }
+            {text: prompt},
+            {text: `Input User: ${msgUser}`}
         ]);
         const response = result.response;
         let text = response.text();
@@ -60,7 +60,7 @@ async function msgToAIProcess(namaUser, msgUser, dataUser) {
 async function connectToWhatsApp() {
     const authFolder = path.join(__dirname, 'auth_info_baileys');
 
-    const { state, saveCreds } = await useMultiFileAuthState(authFolder);
+    const {state, saveCreds} = await useMultiFileAuthState(authFolder);
 
     const sock = makeWASocket({
         auth: state,
@@ -72,10 +72,10 @@ async function connectToWhatsApp() {
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        const {connection, lastDisconnect, qr} = update;
         if (qr) {
             console.log("\nScan QR Code di bawah ini:");
-            qrcode.generate(qr, { small: true });
+            qrcode.generate(qr, {small: true});
         }
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -87,14 +87,14 @@ async function connectToWhatsApp() {
             } else {
                 console.log('⚠️ Sesi rusak atau logout. Menghapus sesi lama...');
 
-                try{
-                    fs.rmSync(authFolder, { recursive: true, force: true});
+                try {
+                    fs.rmSync(authFolder, {recursive: true, force: true});
                     console.log('✅ Folder sesi berhasil dihapus.');
                     console.log('🔄 Memulai ulang bot untuk Scan QR baru...');
 
                     connectToWhatsApp();
                 } catch (error) {
-                    console.error('❌ Gagal menghapus folder sesi:', err);
+                    console.error('❌ Gagal menghapus folder sesi:', error);
                     console.log('Silakan hapus folder "auth_info_baileys" secara manual.');
                 }
             }
@@ -103,7 +103,7 @@ async function connectToWhatsApp() {
         }
     });
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
+    sock.ev.on('messages.upsert', async ({messages}) => {
         const msg = messages ? messages[0] : null;
         if (!msg || !msg.message || msg.key.fromMe) return;
 
@@ -127,7 +127,7 @@ async function connectToWhatsApp() {
                 lastActive: new Date().toISOString()
             };
             saveDB(db);
-            await sock.sendMessage(msg.key.remoteJid, { text: `Halo ${pushName}! Profil baru dibuat.` });
+            await sock.sendMessage(msg.key.remoteJid, {text: `Halo ${pushName}! Profil baru dibuat.`});
             return;
         }
 
@@ -145,7 +145,7 @@ async function connectToWhatsApp() {
                 saveDB(db);
             }
 
-            await sock.sendMessage(msg.key.remoteJid, { text: aiResponse.response_message });
+            await sock.sendMessage(msg.key.remoteJid, {text: aiResponse.response_message});
         }
     });
 }
