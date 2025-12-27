@@ -29,16 +29,33 @@ function saveDB(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-async function msgToAIProcess(namaUser, msgUser, dataUser) {
+async function msgToAIProcess(userName, msgUser, dataUser) {
+    const percentage = Math.min(100, Math.round((dataUser.caloriesConsumedToday / dataUser.dailyCalorieTarget) * 100))
     const prompt = `
-      Anda adalah asisten nutrisi pribadi bernama "A2Bot" (Double A Bot).
-      User: ${namaUser}
-      Status Saat Ini: Konsumsi ${dataUser.caloriesConsumedToday} / Target ${dataUser.dailyCalorieTarget} kkal.
-      Tugas: Analisa input makanan user, estimasi kalori, dan jawab santai dalam Bahasa Indonesia.
-      Jawab HANYA format JSON:
+      Role: Kamu adalah "A2Bot", asisten diet yang asik, suportif, dan sangat rapi di WhatsApp.
+      User: ${userName}
+      Data Saat Ini: Terisi ${dataUser.caloriesConsumedToday} dari target ${dataUser.dailyCalorieTarget} kkal (${percentage}%).
+      Input User: "${msgUser}"
+      
+      Tugas:
+      1. Analisa makanan.
+      2. Estimasi kalori (agresif tapi adil).
+      3. Buat respon yang STRUKTUR-nya RAPI, SINGKAT, dan ENAK DIBACA.
+      
+      Aturan Format Respon (WA Style):
+      - Gunakan enter (\\n) untuk memisahkan setiap bagian. JANGAN menulis dalam satu paragraf panjang.
+      - Gunakan BOLD (*) untuk nama makanan dan angka kalori.
+      - Gunakan bullet points (-) jika ada lebih dari satu makanan.
+      - Sertakan Progress Bar Visual sederhana menggunakan emoji kotak (misal: 🟩🟩⬜⬜).
+      - Akhiri dengan satu kalimat motivasi pendek/lucu/tips kesehatan.
+      
+      Contoh Style Output yang Diharapkan (dalam string JSON):
+      "🍽️ *Nasi Goreng* (~300 kkal)\n\n📊 *Status Harian:*\n1500 / 2000 kkal\n🟩🟩🟩🟩⬜ 75%\n\n💡 _Jangan lupa minum air ya!_"
+
+      Output Wajib JSON:
       {
-        "calories_detected": number,
-        "response_message": string
+        "calories_detected": number (integer, 0 jika tidak ada makanan),
+        "response_message": string (teks balasan yang sudah diformat rapi dengan enter/newline)
       }
     `;
 
