@@ -1,6 +1,6 @@
 require('dotenv').config();
-const {makeWASocket, useMultiFileAuthState, DisconnectReason} = require('@whiskeysockets/baileys');
-const {GoogleGenerativeAI} = require('@google/generative-ai');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, delay, Browsers } = require('@whiskeysockets/baileys');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs');
 const path = require('path');
@@ -13,12 +13,12 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({model: "gemini-2.5-flash"});
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
 if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({users: {}}));
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }));
 }
 
 function getDB() {
@@ -29,32 +29,26 @@ function saveDB(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-async function msgToAIProcess(username, msgUser, dataUser) {
+async function msgToAIProcess(namaUser, msgUser, dataUser) {
     const prompt = `
       Anda adalah asisten nutrisi pribadi bernama "A2Bot" (Double A Bot).
-      User: ${username}
+      User: ${namaUser}
       Status Saat Ini: Konsumsi ${dataUser.caloriesConsumedToday} / Target ${dataUser.dailyCalorieTarget} kkal.
-      
-      Tugas:
-      1. Analisa input makanan user dari teks chat.
-      2. Estimasi kalori secara agresif tapi adil.
-      3. Jawab HANYA dengan format JSON.
-      
-      Output JSON Format:
+      Tugas: Analisa input makanan user, estimasi kalori, dan jawab santai dalam Bahasa Indonesia.
+      Jawab HANYA format JSON:
       {
-        "calories_detected": number (0 jika bukan makanan),
-        "response_message": string (Respon chat bahasa Indonesia santai, sebutkan sisa kalori. Gunakan emoji. Mengaku sebagai A2Bot jika perlu.)
+        "calories_detected": number,
+        "response_message": string
       }
     `;
 
     try {
         const result = await model.generateContent([
-            {text: prompt},
-            {text: `Input User: ${msgUser}`}
+            { text: prompt },
+            { text: `Input User: ${msgUser}` }
         ]);
         const response = result.response;
         let text = response.text();
-
         text = text.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(text);
     } catch (error) {
@@ -64,46 +58,42 @@ async function msgToAIProcess(username, msgUser, dataUser) {
 }
 
 async function connectToWhatsApp() {
-    const {state, saveCreds} = await useMultiFileAuthState('auth_info_baileys');
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: true,
+        browser: Browsers.macOS('Desktop'),
+        syncFullHistory: false,
         defaultQueryTimeoutMs: undefined
     });
 
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
-        const {connection, lastDisconnect, qr} = update;
-
-        if (qr) {
-            console.log("Scan QR Code di bawah ini dengan WhatsApp:");
-            qrcode.generate(qr, {small: true});
-        }
-
+        const { connection, lastDisconnect, qr } = update;
+        if (qr) qrcode.generate(qr, { small: true });
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Koneksi terputus, mencoba reconnect...', shouldReconnect);
             if (shouldReconnect) connectToWhatsApp();
         } else if (connection === 'open') {
-            console.log('✅ A2Bot berhasil terhubung dan siap bekerja!');
+            console.log('✅ A2Bot terhubung (Mode Aman Aktif)!');
         }
     });
 
-    sock.ev.on('messages.upsert', async ({messages}) => {
+    sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages ? messages[0] : null;
-
         if (!msg || !msg.message || msg.key.fromMe) return;
 
         const senderId = msg.key.participant || msg.key.remoteJid;
         const pushName = msg.pushName || "Teman";
-
         const textMessage = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
         if (!textMessage) return;
 
         console.log(`📩 Pesan dari ${pushName}: ${textMessage}`);
+
+        await sock.readMessages([msg.key]);
 
         const db = getDB();
 
@@ -115,15 +105,21 @@ async function connectToWhatsApp() {
                 lastActive: new Date().toISOString()
             };
             saveDB(db);
-            await sock.sendMessage(msg.key.remoteJid, {text: `Halo ${pushName}! 👋 A2Bot aktif. Target kalorimu set di 2000 kkal. Silakan input makanan!`});
+            await sock.sendMessage(msg.key.remoteJid, { text: `Halo ${pushName}! Profil baru dibuat.` });
             return;
         }
 
         const userProfile = db.users[senderId];
 
+        const thinkingTime = Math.floor(Math.random() * 3000) + 2000;
+
         await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
 
+        await delay(thinkingTime);
+
         const aiResponse = await msgToAIProcess(pushName, textMessage, userProfile);
+
+        await sock.sendPresenceUpdate('paused', msg.key.remoteJid);
 
         if (aiResponse) {
             if (aiResponse.calories_detected > 0) {
@@ -133,7 +129,7 @@ async function connectToWhatsApp() {
                 saveDB(db);
             }
 
-            await sock.sendMessage(msg.key.remoteJid, {text: aiResponse.response_message});
+            await sock.sendMessage(msg.key.remoteJid, { text: aiResponse.response_message });
         }
     });
 }
